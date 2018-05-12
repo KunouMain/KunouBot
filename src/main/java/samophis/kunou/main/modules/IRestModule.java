@@ -20,8 +20,8 @@ public interface IRestModule extends Module {
     IApplicationModule getApplicationModule();
 
     /**
-     *
-     * @return
+     * Returns the Gateway {@link Request Request} (to {@code '/gateway/bot'}) for the {@link IGatewayModule IGatewayModule} to connect.
+     * @return The Gateway {@link Request Request} used to retrieve Shard Count and Gateway Endpoint Information.
      */
     Request getGatewayRequest();
 }
