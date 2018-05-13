@@ -17,7 +17,7 @@ public class RouteImpl implements Route {
     public RouteImpl(@Nonnull String endpoint, @Nonnull RequestType type, @Nullable Requester requester) {
         this.endpoint = Objects.requireNonNull(endpoint);
         this.type = Objects.requireNonNull(type);
-        this.requester = requester == null ? new samophis.kunou.main.entities.http.impl.RequesterImpl() : requester;
+        this.requester = requester == null ? new RequesterImpl() : requester;
     }
     @Override
     public RequestType getType() {
@@ -33,7 +33,7 @@ public class RouteImpl implements Route {
     }
     @Override
     public Request asRequest(@Nonnull IApplicationModule module, @Nullable String data) {
-        return new samophis.kunou.main.entities.http.impl.RequestImpl(this, module, data);
+        return new RequestImpl(this, module, data);
     }
     @Override
     public Route format(@Nonnull Object... params) {

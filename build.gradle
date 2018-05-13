@@ -1,9 +1,13 @@
 plugins {
     id 'java'
     id 'maven'
+    id 'application'
     id 'com.github.johnrengelman.shadow' version '2.0.4'
 }
 
+group 'samophis'
+version '0.1'
+mainClassName = 'samophis.kunou.main.test.Main'
 
 javadoc {
     source = sourceSets.main.allJava

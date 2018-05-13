@@ -19,6 +19,13 @@ public interface Requester {
     void submitRequest(@Nonnull InnerRequest request);
 
     /**
+     * Used <b>after a call to {@link Requester#shutdown()}</b> to re-start the thread pool.
+     * <br><p>Used in conjunction with KunouCore to provide a rebootable, modular experience.
+     * Additionally, this <b>MUST</b> be used after being shutdown -- the constructor already starts the thread pool up.</p>
+     */
+    void startup();
+
+    /**
      * Stops the loop which accepts queued requests (essentially shutting down this Requester).
      * <br><p>This also shuts down the internal thread pool backing the Requester.</p>
      * @throws IllegalStateException If the thread pool has already been shut down.

@@ -34,34 +34,26 @@ public class RequesterImpl implements Requester {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.RFC_1123_DATE_TIME;
     private static final CloseableHttpAsyncClient CLIENT = HttpAsyncClients.createDefault();
     private static long offset = Long.MAX_VALUE;
-    private final ScheduledExecutorService pool;
     private final Queue<InnerRequest> requests;
     private final AtomicInteger remaining;
+    private volatile ScheduledExecutorService pool;
     private volatile int limit;
     private volatile long lastReset, currentReset;
     private volatile boolean isActive, isWaiting;
     public RequesterImpl() {
+        System.out.println("requester created!");
         this.pool = Executors.newScheduledThreadPool(2);
         this.requests = new ConcurrentLinkedQueue<>();
         this.remaining = new AtomicInteger(1);
         this.limit = 1;
         this.lastReset = 0;
         this.currentReset = 0;
-        this.isActive = true;
         this.isWaiting = false;
+        startup();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (!pool.isShutdown())
                 pool.shutdownNow();
         }));
-        pool.submit(() -> {
-            do {
-                InnerRequest request = requests.poll();
-                if (request == null || remaining.get() == 0 || Globals.isLocked())
-                    continue;
-                remaining.decrementAndGet();
-                processRequest(request);
-            } while (isActive);
-        });
     }
     @Override
     public int getRemainingRequests() {
@@ -84,10 +76,28 @@ public class RequesterImpl implements Requester {
         requests.add(Objects.requireNonNull(request));
     }
     @Override
+    public void startup() {
+        if (!pool.isShutdown() && isActive)
+            throw new IllegalStateException("This Requester instance is already alive!");
+        isActive = true;
+        pool = Executors.newScheduledThreadPool(2);
+        pool.submit(() -> {
+            do {
+                InnerRequest request = requests.poll();
+                if (request == null || remaining.get() == 0 || Globals.isLocked())
+                    continue;
+                remaining.decrementAndGet();
+                processRequest(request);
+            } while (isActive);
+        });
+    }
+    @Override
     public void shutdown() {
         if (pool.isShutdown())
             throw new IllegalStateException("This Requester instance is already shutdown!");
         isActive = false;
+        offset = Long.MAX_VALUE;
+        requests.clear();
         pool.shutdown();
     }
     @SuppressWarnings("ConstantConditions") /* -- getting rid of nullable json data stuff -- */
@@ -165,7 +175,7 @@ public class RequesterImpl implements Requester {
                             ? Integer.parseUnsignedInt(result.getFirstHeader("Retry-After").getValue())
                             : _ret.toInt();
                     if (global)
-                        Globals.setLocked(true, retry);
+                        Globals.lockGlobal(retry);
                     pool.schedule(() -> CLIENT.execute(base, this), retry, TimeUnit.MILLISECONDS);
                     EntityUtils.consumeQuietly(result.getEntity());
                     return;
@@ -189,7 +199,7 @@ public class RequesterImpl implements Requester {
                 request.getFailureCallback().accept(new RequestException("HTTP Request cancelled!"));
             }
         };
-
+        CLIENT.execute(base, callback);
     }
     static {
         CLIENT.start();

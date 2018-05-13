@@ -1,9 +1,12 @@
 package samophis.kunou.main.modules;
 
 import samophis.kunou.core.modules.Module;
+import samophis.kunou.main.entities.gateway.IdentifyLimiter;
+import samophis.kunou.main.entities.gateway.events.EventListener;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import java.util.List;
 
 /**
  * Module Declaration which covers the Discord Gateway so that users can make their own implementations without having to waste performance by parsing messages.
@@ -29,11 +32,34 @@ public interface IGatewayModule extends Module {
     IRestModule getRestModule();
 
     /**
+     * Fetches the {@link IdentifyLimiter IdentifyLimiter} used to safely rate limit IDENTIFY payloads.
+     * @return The {@link IdentifyLimiter IdentifyLimiter} used by all shards attached to this module.
+     */
+    IdentifyLimiter getIdentifyRateLimiter();
+
+    /**
+     * Fetches an unmodifiable view of all the {@link EventListener EventListeners} attached to this Gateway Module.
+     * @return An unmodifiable view of all the {@link EventListener EventListeners} this Gateway Module is aware of.
+     */
+    List<EventListener> getEventListeners();
+
+    /**
+     * Gets the Gateway Endpoint, as determined by the response from the {@link IRestModule#getGatewayRequest()} request.
+     * @return The Gateway Endpoint to connect shards to.
+     */
+    String getGatewayEndpoint();
+
+    /**
+     * Gets the number of recommended shards, as determined by the response from the {@link IRestModule#getGatewayRequest()}} request.
+     * @return The number of shards to run, as recommended by Discord.
+     */
+    int getGatewayShards();
+    /**
      * Should send text data through an active/open WebSocket connection to the Discord Gateway (on a specific shard).
      * <br><p>For more convenience -- and if your version of Kunou only runs on one shard -- see the method overload that automatically sends data to Shard #0.</p>
      * @param shard The <b>not-negative</b> number/index of the shard to send data to.
      * @param data The <b>not-null</b> data to send to a shard.
-     * @throws IllegalArgumentException If {@code 'shard'} is negative.
+     * @throws IllegalArgumentException If {@code 'shard'} is negative or if it doesn't correlate to a pre-existing {@link samophis.kunou.main.entities.gateway.WebSocketShard WebSocketShard}.
      * @throws NullPointerException If {@code 'data'} is {@code null}.
      * @throws samophis.kunou.core.exceptions.ModuleException If the module or its contents are not in the right state to send data to.
      * @see IGatewayModule#sendText(String)
@@ -48,4 +74,13 @@ public interface IGatewayModule extends Module {
      * @see IGatewayModule#sendText(int, String)
      */
     void sendText(@Nonnull String data);
+
+    /**
+     * Adds a {@link EventListener EventListener} to this module.
+     * <br><p>Whenever any {@link samophis.kunou.main.entities.gateway.WebSocketShard WebSocketShard} attached to this module receives an
+     * {@link samophis.kunou.main.entities.gateway.events.Event Event}, it is broadcast to each listener also attached to this module.
+     * @param listener The <b>not-null</b> {@link EventListener EventListener} to add to this module.
+     * @throws NullPointerException If {@code 'listener'} is null.
+     */
+    void addListener(@Nonnull EventListener listener);
 }
